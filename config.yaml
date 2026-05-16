@@ -1,0 +1,38 @@
+# WISE-WRSOM 水资源优化调度系统配置文件
+
+muskingum:
+  k: [0, 0, 0, 0, 13, 16, 16, 80, 150]
+  x: [0, 0, 0, 0, 0, 0, 0, 0, 0.2]
+  t: [24, 24, 24, 24, 24, 24, 24, 24, 24]
+  cost_coefficients:
+    - [2e-06, 4e-07, 7e-07, 1e-06, 5e-05, 9e-05, 5e-07, 0, -0.0256]
+    - [0.0051, 0.0257, 0.0607, 0.0262, -0.0022, -0.0044, -0.0002, -1e-04, 1.2622]
+    - [0.1383, 0.1532, 0.1517, 0.5247, 1.026, 0.2016, 0.3134, 0.1667, -4.191]
+  surface_coefficients:
+    - [-0.0025, -0.0029, -0.0006, -0.0064, -0.0046, -0.003, -7e-05, -0.0012, -0.1226]
+    - [0.7429, 0.983, 0.2342, 1.6813, 1.0961, 0.9248, 0.02, 0.2796, 33.107]
+    - [48.48, 36.206, 39.956, 62.855, 68.038, 224.92, 85.033, 39.779, 770.2]
+  special_lose_water: [0, 0, 0, 0, 0, 0, 6500000, 0, 850000]
+  initial_flow: [0, 0, 0, 0, 0, 0, 0, 0, 0]
+  tributary_data_path: data/water_divide.xlsx
+
+optimizer:
+  population_size: 100
+  scheduling_days: 80
+  max_iterations_outer: 20
+  max_iterations_inner: 20
+  flow_min: 3.0
+  flow_max: 100.0
+  total_water: 150000000
+  velocity_max: 5.0
+  velocity_min: -5.0
+  algorithm: auto  # auto: 根据目标数量自动选择; smpso/nsga3/moead: 指定算法
+
+decision:
+  subjective_weights: [0.25, 0.25, 0.25, 0.25]
+  method: topsis
+
+output:
+  output_dir: data
+  pareto_file: SM_model_result.json
+  ranking_file: DO_g_result.json

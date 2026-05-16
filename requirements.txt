@@ -13,6 +13,12 @@ tqdm>=4.60.0
 # Excel文件读取
 openpyxl>=3.0.7
 
+# CLI 命令行
+click>=8.0.0
+
+# YAML 配置文件
+pyyaml>=6.0
+
 # 分布式计算（可选）
 # 如需使用Spark加速，请取消以下注释并安装
 # pyspark>=3.1.0
