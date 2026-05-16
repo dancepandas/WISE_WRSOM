@@ -19,14 +19,14 @@ muskingum:
 optimizer:
   population_size: 100
   scheduling_days: 80
-  max_iterations_outer: 20
-  max_iterations_inner: 20
+  max_iterations_outer: 100
+  max_iterations_inner: 100
   flow_min: 3.0
   flow_max: 100.0
   total_water: 150000000
   velocity_max: 5.0
   velocity_min: -5.0
-  algorithm: auto  # auto: 根据目标数量自动选择; smpso/nsga3/moead: 指定算法
+  algorithm: smpso  # auto: 根据目标数量自动选择; smpso/nsga3/moead: 指定算法
 
 decision:
   subjective_weights: [0.25, 0.25, 0.25, 0.25]

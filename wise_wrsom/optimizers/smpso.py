@@ -63,7 +63,17 @@ class SMPSOOptimizer:
             velocity = self._update_velocity(seg_pop, velocity, archive, w)
             self._update_population(seg_pop, velocity, flow_min, flow_max)
             for i in range(len(seg_pop)):
+                old_n = velocity[i].shape[0] if i < len(velocity) else 0
                 seg_pop[i] = segment_mutation(seg_pop[i], self.mutation_rate, self.mutation_eta)
+                new_n = seg_pop[i].n_segments
+                if new_n != old_n:
+                    # 段数变化后重新初始化速度
+                    v = np.zeros(new_n)
+                    n_active = new_n - 1
+                    if n_active > 0:
+                        v[:n_active] = np.random.uniform(self.velocity_min, self.velocity_max, n_active)
+                        v[-1] = -np.dot(v[:n_active], seg_pop[i].day_splits[:n_active]) / seg_pop[i].day_splits[-1]
+                    velocity[i] = np.clip(v, self.velocity_min, self.velocity_max)
             obj_values = evaluate_objectives(
                 objectives, routing_model, river_params, seg_pop.expand(), total_water
             )
@@ -115,6 +125,15 @@ class SMPSOOptimizer:
             for j in range(sol.n_segments):
                 seg_delta[j] = np.mean(leader_delta[idx:idx + sol.day_splits[j]])
                 idx += sol.day_splits[j]
+
+            # 如果 velocity 维度与当前解段数不匹配，重新初始化
+            if velocity[i].shape[0] != sol.n_segments:
+                v_new = np.zeros(sol.n_segments)
+                n_active = sol.n_segments - 1
+                if n_active > 0:
+                    v_new[:n_active] = np.random.uniform(self.velocity_min, self.velocity_max, n_active)
+                    v_new[-1] = -np.dot(v_new[:n_active], sol.day_splits[:n_active]) / sol.day_splits[-1]
+                velocity[i] = np.clip(v_new, self.velocity_min, self.velocity_max)
 
             cognitive = np.random.uniform(0, 1, sol.n_segments) * seg_delta * 0.1
             v = (w * velocity[i] + c2 * r2 * seg_delta + c1 * r1 * cognitive) * chi
