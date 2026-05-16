@@ -26,7 +26,7 @@ optimizer:
   total_water: 150000000
   velocity_max: 5.0
   velocity_min: -5.0
-  algorithm: smpso  # auto: 根据目标数量自动选择; smpso/nsga3/moead: 指定算法
+  algorithm: nsga3  # auto: 根据目标数量自动选择; smpso/nsga3/moead: 指定算法
 
 decision:
   subjective_weights: [0.25, 0.25, 0.25, 0.25]
