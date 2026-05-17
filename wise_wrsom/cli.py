@@ -47,6 +47,23 @@ _format_option = click.option(
     help="输出格式：text（人类可读）/ json（机器可解析）",
 )
 
+_optimizer_options = [
+    click.option("--velocity-max", default=None, type=float, help="SMPSO 最大速度"),
+    click.option("--velocity-min", default=None, type=float, help="SMPSO 最小速度"),
+    click.option("--crossover-rate", default=None, type=float, help="NSGA-III/MOEA/D 交叉率"),
+    click.option("--crossover-eta", default=None, type=float, help="NSGA-III 交叉分布指数"),
+    click.option("--n-reference-divisions", default=None, type=int, help="NSGA-III 参考点分割数"),
+    click.option("--n-neighbors", default=None, type=int, help="MOEA/D 邻域大小"),
+    click.option("--mutation-rate", default=None, type=float, help="变异率"),
+    click.option("--mutation-eta", default=None, type=float, help="变异分布指数"),
+]
+
+
+def _add_optimizer_options(func):
+    for option in reversed(_optimizer_options):
+        func = option(func)
+    return func
+
 
 @click.group()
 @click.version_option(version="2.0.0", prog_name="wise-wrsom")
@@ -66,11 +83,20 @@ def cli():
 @click.option("--iterations", "-n", default=None, type=int, help="最大迭代次数")
 @click.option("--population", "-p", default=None, type=int, help="种群大小")
 @click.option("--objectives", "-o", default=None, help="目标函数列表（逗号分隔）")
+@_add_optimizer_options
 @_format_option
-def run(config_path, algorithm, iterations, population, objectives, fmt):
+def run(config_path, algorithm, iterations, population, objectives,
+        velocity_max, velocity_min, crossover_rate, crossover_eta,
+        n_reference_divisions, n_neighbors, mutation_rate, mutation_eta, fmt):
     """运行完整的优化调度流水线。"""
     config = _load_config(config_path)
-    _apply_overrides(config, algorithm, iterations, population, objectives)
+    _apply_overrides(
+        config, algorithm, iterations, population, objectives,
+        velocity_max=velocity_max, velocity_min=velocity_min,
+        crossover_rate=crossover_rate, crossover_eta=crossover_eta,
+        n_reference_divisions=n_reference_divisions, n_neighbors=n_neighbors,
+        mutation_rate=mutation_rate, mutation_eta=mutation_eta,
+    )
 
     from .pipeline import Pipeline
     pipeline = Pipeline(config)
@@ -99,18 +125,27 @@ def run(config_path, algorithm, iterations, population, objectives, fmt):
 @click.option("--population", "-p", default=100, type=int, help="种群大小")
 @click.option("--objectives", "-o", default=None, help="目标函数列表")
 @click.option("--output", default=None, help="输出文件路径")
+@_add_optimizer_options
 @_format_option
-def optimize(config_path, algorithm, iterations, population, objectives, output, fmt):
+def optimize(config_path, algorithm, iterations, population, objectives, output,
+             velocity_max, velocity_min, crossover_rate, crossover_eta,
+             n_reference_divisions, n_neighbors, mutation_rate, mutation_eta, fmt):
     """仅执行多目标优化。"""
     config = _load_config(config_path)
-    _apply_overrides(config, algorithm, iterations, population, objectives)
+    _apply_overrides(
+        config, algorithm, iterations, population, objectives,
+        velocity_max=velocity_max, velocity_min=velocity_min,
+        crossover_rate=crossover_rate, crossover_eta=crossover_eta,
+        n_reference_divisions=n_reference_divisions, n_neighbors=n_neighbors,
+        mutation_rate=mutation_rate, mutation_eta=mutation_eta,
+    )
 
-    from .optimizers import create_optimizer
+    from .optimizers import create_optimizer, build_optimizer_kwargs
     from .objectives import create_objectives
     from .routing.muskingum import MuskingumRouter
     from .protocols.routing import RiverParams
 
-    optimizer = create_optimizer(algorithm)
+    optimizer = create_optimizer(algorithm, **build_optimizer_kwargs(config.optimizer, algorithm))
     routing_model = MuskingumRouter()
 
     obj_names = objectives.split(",") if objectives else [
@@ -459,6 +494,7 @@ def _apply_overrides(
     iterations: int | None,
     population: int | None,
     objectives: str | None,
+    **algo_params,
 ) -> None:
     """应用命令行参数覆盖。"""
     if algorithm:
@@ -467,3 +503,6 @@ def _apply_overrides(
         config.optimizer.max_iterations_outer = iterations
     if population:
         config.optimizer.population_size = population
+    for name, value in algo_params.items():
+        if value is not None:
+            setattr(config.optimizer, name, value)
