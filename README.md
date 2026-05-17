@@ -78,25 +78,94 @@ pip install -r requirements.txt
 python -m wise_wrsom run --config config.yaml
 ```
 
-### 其他命令
+更多命令参见 [CLI 命令参考](#cli-命令参考)。
+
+## CLI 命令参考
+
+所有命令支持 `--format json` 输出机器可解析结果，便于 Agent 系统调用。
+
+### `run` — 运行完整流水线
+
+优化 → 决策排序 → 保存 → 可视化一步完成。
+
 ```bash
-# 仅优化
-python -m wise_wrsom optimize --config config.yaml
+python -m wise_wrsom run -c config.yaml -a nsga3 -n 100 -p 100
+```
 
-# 仅排序
-python -m wise_wrsom rank --input data/SM_model_result.json
+| 选项 | 说明 |
+|------|------|
+| `-c, --config` | 配置文件路径 |
+| `-a, --algorithm` | 优化算法（auto/smpso/nsga3/moead） |
+| `-n, --iterations` | 最大迭代次数 |
+| `-p, --population` | 种群大小 |
+| `-o, --objectives` | 目标函数列表（逗号分隔） |
+| `--velocity-max` | SMPSO 粒子最大速度 |
+| `--velocity-min` | SMPSO 粒子最小速度 |
+| `--crossover-rate` | NSGA-III/MOEA/D 交叉概率 |
+| `--crossover-eta` | NSGA-III 交叉分布指数 |
+| `--n-reference-divisions` | NSGA-III 参考点分割数 |
+| `--n-neighbors` | MOEA/D 邻域大小 |
+| `--mutation-rate` | 变异概率 |
+| `--mutation-eta` | 变异分布指数 |
 
-# 仅可视化
-python -m wise_wrsom visualize --input data/SM_model_result.json --type pareto
+### `optimize` — 仅执行多目标优化
 
-# 列出可用算法
+```bash
+python -m wise_wrsom optimize -a smpso --mutation-rate 0.2 --velocity-max 3.0
+```
+
+选项与 `run` 相同，额外支持 `--output` 指定输出文件路径。
+
+### `rank` — 对 Pareto 解进行决策排序
+
+```bash
+python -m wise_wrsom rank -i data/SM_model_result.json -w 0.3,0.2,0.3,0.2
+```
+
+| 选项 | 说明 |
+|------|------|
+| `-i, --input` | Pareto 结果文件路径 |
+| `-w, --weights` | 主观权重（逗号分隔） |
+| `--output` | 输出文件路径 |
+
+### `visualize` — 可视化结果
+
+```bash
+python -m wise_wrsom visualize -i data/SM_model_result.json -t pareto
+python -m wise_wrsom visualize -i data/SM_model_result.json -t schedule -r data/DO_g_result.json
+```
+
+| 选项 | 说明 |
+|------|------|
+| `-i, --input` | Pareto 结果文件路径 |
+| `-t, --type` | 图表类型（pareto / schedule） |
+| `-r, --ranking` | 排序结果文件路径（schedule 类型需要） |
+| `--output` | 图片保存路径 |
+
+### `best` — 查看排名第一的最优方案
+
+```bash
+python -m wise_wrsom best -i data/SM_model_result.json -r data/DO_g_result.json
+```
+
+### `export` — 导出前 N 名方案
+
+```bash
+python -m wise_wrsom export -i data/SM_model_result.json -r data/DO_g_result.json -n 5
+```
+
+### `list-optimizers` / `list-objectives` / `list-routing` — 列出可用组件
+
+```bash
 python -m wise_wrsom list-optimizers
-
-# 列出可用目标
 python -m wise_wrsom list-objectives
+python -m wise_wrsom list-routing
+```
 
-# 生成默认配置
-python -m wise_wrsom init-config --output config.yaml
+### `init-config` — 生成默认配置文件
+
+```bash
+python -m wise_wrsom init-config -o config.yaml
 ```
 
 ## 配置说明
@@ -122,6 +191,19 @@ optimizer:
   flow_max: 100.0                             # 最大流量(m³/s)
   total_water: 150000000                      # 总调度水量(m³)
   algorithm: auto                             # auto/smpso/nsga3/moead
+  # SMPSO 专用
+  velocity_max: 5.0                           # 粒子最大速度
+  velocity_min: -5.0                          # 粒子最小速度
+  # NSGA-III / MOEA/D 共用
+  crossover_rate: 0.9                         # 交叉概率
+  crossover_eta: 20.0                         # 交叉分布指数（仅 NSGA-III）
+  # NSGA-III 专用
+  n_reference_divisions: 12                   # 参考点分割数
+  # MOEA/D 专用
+  n_neighbors: 10                             # 邻域大小
+  # 共用
+  mutation_rate: 0.1                          # 变异概率
+  mutation_eta: 20.0                          # 变异分布指数
 
 decision:
   subjective_weights: [0.25, 0.25, 0.25, 0.25]  # 4个决策目标权重
@@ -142,7 +224,7 @@ decision:
 
 ### 添加新目标函数
 1. 在 `wise_wrsom/objectives/` 下创建新文件
-2. 实现 `ObjectiveFunction` 协议（`name`, `direction`, `compute`, `apply_penalty`）
+2. 实现 `ObjectiveFunction` 接口（`name`, `direction`, `compute`, `apply_penalty`）
 3. 用 `@register("name")` 装饰器注册
 4. 在 pipeline 中启用
 
@@ -153,6 +235,6 @@ decision:
 4. 在 `config.yaml` 中指定算法名称
 
 ### 添加新河道模型
-1. 实现 `RoutingModel` 协议的 `compute()` 方法
+1. 实现 `RoutingModel` 接口的 `compute()` 方法
 2. 返回 `RoutingResult`（water_duration, outflow, surface_area, infiltration, downstream_flows）
 3. 在 Pipeline 构造时注入
