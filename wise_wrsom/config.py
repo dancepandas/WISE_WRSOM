@@ -46,9 +46,20 @@ class OptimizerParams:
     flow_min: float = 3.0
     flow_max: float = 100.0
     total_water: float = 150_000_000
+    algorithm: str = "auto"  # "auto", "smpso", "nsga3", "moead"
+    # SMPSO 专用
     velocity_max: float = 5.0
     velocity_min: float = -5.0
-    algorithm: str = "auto"  # "auto", "smpso", "nsga3", "moead"
+    # NSGA-III / MOEA/D 共用
+    crossover_rate: float = 0.9
+    crossover_eta: float = 20.0
+    # NSGA-III 专用
+    n_reference_divisions: int = 12
+    # MOEA/D 专用
+    n_neighbors: int = 10
+    # 共用
+    mutation_rate: float = 0.1
+    mutation_eta: float = 20.0
 
 
 @dataclass

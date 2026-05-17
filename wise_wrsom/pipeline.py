@@ -13,7 +13,7 @@ import numpy as np
 from .config import ProjectConfig
 from .decision.topsis import TOPSISDecision
 from .objectives import create_objectives
-from .optimizers import create_optimizer
+from .optimizers import create_optimizer, build_optimizer_kwargs
 from .protocols.decision import DecisionModel
 from .protocols.objective import ObjectiveFunction
 from .protocols.optimizer import OptimizationResult
@@ -75,11 +75,10 @@ class Pipeline:
         algorithm = self.config.optimizer.algorithm
         if algorithm == "auto":
             n_obj = len(self.objectives)
-            if n_obj <= 3:
-                return create_optimizer("nsga3")
-            else:
-                return create_optimizer("moead")
-        return create_optimizer(algorithm)
+            algorithm = "nsga3" if n_obj <= 3 else "moead"
+
+        kwargs = build_optimizer_kwargs(self.config.optimizer, algorithm)
+        return create_optimizer(algorithm, **kwargs)
 
     def run(self) -> PipelineResult:
         """执行完整流水线。"""
